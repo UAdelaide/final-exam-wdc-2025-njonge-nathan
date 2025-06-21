@@ -2,159 +2,93 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dog Walk Service</title>
+  <title>Dog of the Day!</title>
+  <!-- Intentionally cluttered styling & animations to break cognitive & kinematic load rules -->
   <style>
     body {
-      font-family: sans-serif;
-      margin: 2rem;
-      line-height: 1.4;
+      background: url('https://www.transparenttextures.com/patterns/food.png'); /* busy background */
+      font-family: 'Comic Sans MS', cursive, sans-serif; /* poor readability */
+      color: #ff00ff; /* low contrast */
+      animation: hue-rotate 3s infinite linear; /* constant hue rotation */
     }
-    h2 {
-      margin-top: 2rem;
+    h1 {
+      font-size: 5vw;
+      text-shadow: 2px 2px #00ff00;
+      animation: shake 0.5s infinite; /* distracting movement */
     }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-bottom: 1rem;
+    img {
+      width: 80vmin;
+      border: 10px dashed yellow;
+      animation: spin 2s infinite; /* spinning image breaks kinematic load */
     }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 0.5rem;
-      text-align: left;
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
     }
-    th {
-      background: #f4f4f4;
+    @keyframes hue-rotate {
+      0%   { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
     }
-    .loading {
-      color: #888;
-      font-style: italic;
+    button {
+      background: #000;
+      color: #333; /* virtually invisible text */
+      border: none;
+      width: 200px;
+      height: 50px;
+      margin: 1rem;
+      cursor: pointer;
+      animation: bounce 0.3s infinite alternate; /* endless bouncing */
+    }
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-10px); }
     }
   </style>
 </head>
 <body>
-  <h1>Dog Walk Service Dashboard</h1>
+  <div id="app">
+    <!-- No proper headings structure or landmarks, missing ARIA roles -->
+    <h1>🐶 DOG OF THE DAY 🐶</h1>
+    <!-- Missing alt attribute intentionally to break accessibility -->
+    <img :src="dogImage" />
+    <!-- Hard-coded dog details cluttered in list, no semantic grouping -->
+    <ul>
+      <li><strong>Name:</strong> Fido</li>
+      <li><strong>Breed:</strong> Golden Retriever</li>
+      <li><strong>Age:</strong> 3 years old</li>
+      <li><strong>Size:</strong> Large</li>
+    </ul>
+    <!-- Button to reload dog but no visible focus outline (accessibility failure) -->
+    <button @click="fetchDog()">Get Another Dog!</button>
+  </div>
 
-  <section id="dogs-section">
-    <h2>All Dogs</h2>
-    <p id="dogs-loading" class="loading">Loading dogs…</p>
-    <table id="dogs-table" hidden>
-      <thead>
-        <tr>
-          <th>Dog Name</th>
-          <th>Size</th>
-          <th>Owner</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <section id="requests-section">
-    <h2>Open Walk Requests</h2>
-    <p id="requests-loading" class="loading">Loading walk requests…</p>
-    <table id="requests-table" hidden>
-      <thead>
-        <tr>
-          <th>Request ID</th>
-          <th>Dog Name</th>
-          <th>Time</th>
-          <th>Duration (min)</th>
-          <th>Location</th>
-          <th>Owner</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <section id="walkers-section">
-    <h2>Walker Summary</h2>
-    <p id="walkers-loading" class="loading">Loading walker summary…</p>
-    <table id="walkers-table" hidden>
-      <thead>
-        <tr>
-          <th>Walker</th>
-          <th>Total Ratings</th>
-          <th>Average Rating</th>
-          <th>Completed Walks</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
+  <!-- Vue 3 via CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script>
-    async function fetchAndRender(url, tableId, loadingId, renderRow) {
-      const loadingEl = document.getElementById(loadingId);
-      const tableEl   = document.getElementById(tableId);
-      const tbody     = tableEl.querySelector('tbody');
+    const { createApp, ref, onMounted } = Vue;
 
-      try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(res.statusText);
-        const items = await res.json();
+    createApp({
+      setup() {
+        const dogImage = ref('');
 
-        // remove loading text
-        loadingEl.hidden = true;
-        tableEl.hidden   = false;
+        async function fetchDog() {
+          try {
+            const res = await fetch('https://dog.ceo/api/breeds/image/random');
+            const data = await res.json();
+            dogImage.value = data.message;
+          } catch (e) {
+            dogImage.value = '';
+            console.error('Fetch error', e);
+          }
+        }
 
-        // render rows
-        items.forEach(item => {
-          const tr = document.createElement('tr');
-          renderRow(tr, item);
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        loadingEl.textContent = 'Error loading data.';
-        console.error(`Failed to fetch ${url}:`, err);
+        onMounted(fetchDog);
+
+        return { dogImage, fetchDog };
       }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      fetchAndRender(
-        '/api/dogs',
-        'dogs-table',
-        'dogs-loading',
-        (tr, d) => {
-          tr.innerHTML = `
-            <td>${d.dog_name}</td>
-            <td>${d.size}</td>
-            <td>${d.owner_username}</td>
-          `;
-        }
-      );
-
-      fetchAndRender(
-        '/api/walkrequests/open',
-        'requests-table',
-        'requests-loading',
-        (tr, r) => {
-          tr.innerHTML = `
-            <td>${r.request_id}</td>
-            <td>${r.dog_name}</td>
-            <td>${new Date(r.requested_time).toLocaleString()}</td>
-            <td>${r.duration_minutes}</td>
-            <td>${r.location}</td>
-            <td>${r.owner_username}</td>
-          `;
-        }
-      );
-
-      fetchAndRender(
-        '/api/walkers/summary',
-        'walkers-table',
-        'walkers-loading',
-        (tr, w) => {
-          tr.innerHTML = `
-            <td>${w.walker_username}</td>
-            <td>${w.total_ratings}</td>
-            <td>${w.average_rating ?? '–'}</td>
-            <td>${w.completed_walks}</td>
-          `;
-        }
-      );
-    });
+    }).mount('#app');
   </script>
 </body>
 </html>
