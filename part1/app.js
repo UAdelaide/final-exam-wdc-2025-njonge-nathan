@@ -6,7 +6,7 @@ async function main() {
   // 1. Connect to MySQL
   const db = await mysql.createConnection({
     host:     'localhost',
-    user:     'YOUR_DB_USER',
+    user:     'root',
     password: 'YOUR_DB_PASS',
     database: 'DogWalkService'
   });
