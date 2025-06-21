@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dog Walk Service</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 2rem;
+      line-height: 1.4;
+    }
+    h2 {
+      margin-top: 2rem;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      background: #f4f4f4;
+    }
+    .loading {
+      color: #888;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>Dog Walk Service Dashboard</h1>
+
+  <section id="dogs-section">
+    <h2>All Dogs</h2>
+    <p id="dogs-loading" class="loading">Loading dogs…</p>
+    <table id="dogs-table" hidden>
+      <thead>
+        <tr>
+          <th>Dog Name</th>
+          <th>Size</th>
+          <th>Owner</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="requests-section">
+    <h2>Open Walk Requests</h2>
+    <p id="requests-loading" class="loading">Loading walk requests…</p>
+    <table id="requests-table" hidden>
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Dog Name</th>
+          <th>Time</th>
+          <th>Duration (min)</th>
+          <th>Location</th>
+          <th>Owner</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section id="walkers-section">
+    <h2>Walker Summary</h2>
+    <p id="walkers-loading" class="loading">Loading walker summary…</p>
+    <table id="walkers-table" hidden>
+      <thead>
+        <tr>
+          <th>Walker</th>
+          <th>Total Ratings</th>
+          <th>Average Rating</th>
+          <th>Completed Walks</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script>
+    async function fetchAndRender(url, tableId, loadingId, renderRow) {
+      const loadingEl = document.getElementById(loadingId);
+      const tableEl   = document.getElementById(tableId);
+      const tbody     = tableEl.querySelector('tbody');
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(res.statusText);
+        const items = await res.json();
+
+        // remove loading text
+        loadingEl.hidden = true;
+        tableEl.hidden   = false;
+
+        // render rows
+        items.forEach(item => {
+          const tr = document.createElement('tr');
+          renderRow(tr, item);
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        loadingEl.textContent = 'Error loading data.';
+        console.error(`Failed to fetch ${url}:`, err);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchAndRender(
+        '/api/dogs',
+        'dogs-table',
+        'dogs-loading',
+        (tr, d) => {
+          tr.innerHTML = `
+            <td>${d.dog_name}</td>
+            <td>${d.size}</td>
+            <td>${d.owner_username}</td>
+          `;
+        }
+      );
+
+      fetchAndRender(
+        '/api/walkrequests/open',
+        'requests-table',
+        'requests-loading',
+        (tr, r) => {
+          tr.innerHTML = `
+            <td>${r.request_id}</td>
+            <td>${r.dog_name}</td>
+            <td>${new Date(r.requested_time).toLocaleString()}</td>
+            <td>${r.duration_minutes}</td>
+            <td>${r.location}</td>
+            <td>${r.owner_username}</td>
+          `;
+        }
+      );
+
+      fetchAndRender(
+        '/api/walkers/summary',
+        'walkers-table',
+        'walkers-loading',
+        (tr, w) => {
+          tr.innerHTML = `
+            <td>${w.walker_username}</td>
+            <td>${w.total_ratings}</td>
+            <td>${w.average_rating ?? '–'}</td>
+            <td>${w.completed_walks}</td>
+          `;
+        }
+      );
+    });
+  </script>
+</body>
+</html>
